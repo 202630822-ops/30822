@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎒 Smart Prep Alarm</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap">
+<style>
+:root{
+  --bg:#08080a;
+  --panel:#141416;
+  --panel-2:#1b1b1f;
+  --border:rgba(255,255,255,.08);
+  --text:#f5f5f6;
+  --text-dim:#a6a6ad;
+  --muted:#6f6f76;
+  --lime:#c6f135;
+  --lime-strong:#d9ff53;
+  --orange:#ff9640;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+html,body{height:100%}
+body{
+  margin:0;background:#000;color:var(--text);
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Noto Sans KR',system-ui,Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+.mono{ font-family:'Space Mono',monospace; }
+
+/* ---------- opening intro: logo + copy rise up on load ---------- */
+@keyframes riseIn{
+  from{ opacity:0; transform:translateY(28px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+.intro{ opacity:0; animation:riseIn .85s cubic-bezier(.16,1,.3,1) forwards; }
+.intro-1{ animation-delay:.05s; }
+.intro-2{ animation-delay:.18s; }
+.intro-3{ animation-delay:.30s; }
+.intro-4{ animation-delay:.44s; }
+.intro-5{ animation-delay:.56s; }
+.intro-6{ animation-delay:.68s; }
+.intro-7{ animation-delay:.80s; }
+
+/* ---------- fixed side rail (stays put while the page scrolls past it) ---------- */
+.side-rail{
+  display:none;
+  position:fixed; top:0; left:0; bottom:0; width:64px; z-index:15;
+  flex-direction:column; align-items:center; padding:22px 0;
+  background:linear-gradient(180deg, rgba(198,241,53,.14), rgba(255,150,64,.08) 55%, rgba(8,8,10,0) 92%);
+  border-right:1px solid var(--border);
+}
+.side-rail .rail-tile{
+  width:34px;height:34px;border-radius:10px;font-size:17px;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,#1c1c1f,#0d0d0f 60%,#050506);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 0 20px rgba(198,241,53,.18);
+}
+.side-rail .rail-nav{ margin-top:auto; display:flex; flex-direction:column; gap:18px; align-items:center; }
+.side-rail .rail-nav a{
+  color:var(--text-dim); text-decoration:none; font-size:10.5px; font-weight:700; letter-spacing:.02em;
+  transition:color .2s ease;
+}
+.side-rail .rail-nav a:hover{ color:var(--lime); }
+@media(min-width:761px){
+  .side-rail{ display:flex; }
+  body{ padding-left:64px; }
+}
+
+/* ---------- hero (reference design) ---------- */
+.spectrum{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:120%;max-width:1600px;height:120px;
+  background:linear-gradient(90deg,var(--lime),#fff 42%,var(--orange) 68%,var(--lime) 100%);
+  border-radius:0 0 50% 50%/0 0 100% 100%;
+  filter:blur(30px);opacity:.55;pointer-events:none;
+}
+.spectrum::after{
+  content:'';position:absolute;inset:-20px -10% -260px;
+  background:inherit;filter:blur(90px);opacity:.5;z-index:-1;
+}
+.hero{
+  position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:170px 24px 60px;text-align:center;overflow:hidden;
+}
+.glow{
+  position:absolute;top:60px;left:50%;transform:translateX(-50%);
+  width:640px;height:520px;
+  background:
+    radial-gradient(closest-side, rgba(198,241,53,.20), transparent 70%),
+    radial-gradient(closest-side at 65% 40%, rgba(255,150,64,.18), transparent 70%);
+  filter:blur(10px);pointer-events:none;
+}
+.tile{
+  position:relative;z-index:1;
+  width:168px;height:168px;border-radius:42px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:76px;
+  background:
+    radial-gradient(120% 140% at 30% 20%, rgba(255,255,255,.10), transparent 55%),
+    linear-gradient(145deg,#1c1c1f,#0d0d0f 60%,#050506);
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 90px rgba(198,241,53,.12);
+  margin-bottom:26px;
+}
+.eyebrow{
+  position:relative;z-index:1;
+  margin:0 0 18px;color:var(--text-dim);font-size:15px;font-weight:600;letter-spacing:.01em;
+}
+.headline{
+  position:relative;z-index:1;
+  margin:0;font-weight:800;letter-spacing:-.03em;line-height:1.18;
+  font-size:clamp(30px,5.4vw,52px);
+}
+.headline span{display:block}
+.headline .l1{
+  background:linear-gradient(180deg,#f2f2f4,#9c9ca3);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.headline .l2{
+  background:linear-gradient(180deg,var(--lime-strong),var(--lime) 55%,#7fae12);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.sub{
+  position:relative;z-index:1;
+  max-width:620px;margin:26px 0 0;color:var(--text-dim);
+  font-size:16px;line-height:1.75;
+}
+.badge{
+  position:relative;z-index:1;
+  display:inline-flex;align-items:center;gap:10px;margin-top:34px;
+  padding:9px 20px 9px 10px;border-radius:999px;
+  background:var(--panel-2);border:1px solid var(--border);
+  color:var(--text);font-size:13.5px;font-weight:600;
+}
+.badge-icon{
+  width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,var(--lime),var(--orange));font-size:14px;
+}
+.cta{
+  position:relative;z-index:1;
+  margin-top:36px;display:inline-flex;align-items:center;gap:10px;
+  padding:16px 34px;border-radius:999px;
+  background:var(--lime);color:#0a0a0a;font-weight:800;font-size:16px;letter-spacing:-.01em;
+  text-decoration:none;transition:.15s;border:none;cursor:pointer;font-family:inherit;
+  box-shadow:0 20px 50px rgba(198,241,53,.18);
+}
+.cta:hover{background:var(--lime-strong);transform:translateY(-2px);box-shadow:0 26px 60px rgba(198,241,53,.24)}
+.cta:active{transform:translateY(0)}
+.cta .arrow{transition:.15s}
+.cta:hover .arrow{transform:translateX(3px)}
+.foot-note{
+  position:relative;z-index:1;margin-top:18px;color:var(--muted);font-size:12.5px;
+}
+.scroll-cue{
+  position:relative;z-index:1;margin-top:56px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:var(--muted);font-size:12.5px;
+}
+.scroll-cue .arrow-down{
+  width:18px;height:18px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg); animation:bob 1.6s ease-in-out infinite;
+}
+@keyframes bob{ 0%,100%{ transform:rotate(45deg) translate(0,0); } 50%{ transform:rotate(45deg) translate(4px,4px); } }
+
+/* ---------- sequential reveal section ---------- */
+.sequence-wrap{ position:relative; max-width:680px; margin:0 auto; padding:6vh 24px 22vh; }
+.sequence-head{ text-align:center; margin-bottom:8vh; }
+.sequence-head .kicker{ color:var(--lime); font-size:13px; font-weight:700; letter-spacing:.04em; margin-bottom:10px; }
+.sequence-head h2{ font-size:clamp(22px,3.4vw,30px); font-weight:800; margin:0; letter-spacing:-.02em; }
+.sequence{ display:flex; flex-direction:column; gap:22vh; }
+.reveal-card{
+  background:var(--panel); border:1px solid var(--border); border-radius:20px;
+  padding:32px 28px;
+  opacity:0;
+  transition:opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1),
+             box-shadow .35s ease, border-color .35s ease;
+}
+.reveal-card[data-dir="up"]{ transform:translateY(72px) scale(.93); }
+.reveal-card[data-dir="left"]{ transform:translate(-64px,18px) rotate(-3deg) scale(.93); }
+.reveal-card[data-dir="right"]{ transform:translate(64px,18px) rotate(3deg) scale(.93); }
+.reveal-card.visible{ opacity:1; transform:translate(0,0) rotate(0) scale(1); }
+.reveal-card:hover{
+  border-color:var(--lime);
+  box-shadow:0 0 0 1px var(--lime), 0 20px 55px -22px rgba(198,241,53,.55);
+  transform:translateY(-4px) scale(1.01);
+}
+.reveal-card .num{ font-size:12.5px; font-weight:800; letter-spacing:.03em; color:var(--orange); margin-bottom:14px; }
+.reveal-card h3{ font-size:19px; font-weight:800; margin:0 0 10px; }
+.reveal-card p{ font-size:14.5px; line-height:1.7; color:var(--text-dim); margin:0; }
+
+#seqControl{
+  position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+  z-index:10; display:flex; align-items:center; gap:14px;
+  background:rgba(20,20,22,0.85); backdrop-filter:blur(10px);
+  border:1px solid var(--border); border-radius:100px;
+  padding:10px 10px 10px 18px;
+  transition:opacity .4s ease, transform .4s ease;
+}
+#seqControl.hide{ opacity:0; transform:translateX(-50%) translateY(20px); pointer-events:none; }
+#seqControl .progress-label{ font-size:12.5px; color:var(--text-dim); white-space:nowrap; }
+#seqControl .progress-label b{ color:var(--text); }
+.progress-track{ width:70px; height:5px; border-radius:3px; background:rgba(255,255,255,0.1); overflow:hidden; }
+.progress-fill{ height:100%; width:0%; background:linear-gradient(90deg, var(--lime), var(--lime-strong)); transition:width .3s ease; }
+#nextCardBtn{
+  appearance:none; cursor:pointer; border:1px solid var(--border); font-family:inherit;
+  background:var(--panel-2); color:var(--text);
+  width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:15px;
+}
+
+.transition-overlay{
+  position:fixed;inset:0;z-index:999;
+  background:radial-gradient(circle at 50% 50%, rgba(198,241,53,.15), #000 70%);
+  opacity:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .45s ease;
+}
+.transition-overlay.active{opacity:1;pointer-events:all}
+.transition-badge{
+  width:86px;height:86px;border-radius:26px;
+  display:flex;align-items:center;justify-content:center;font-size:40px;
+  background:linear-gradient(145deg,#1c1c1f,#0d0d0f 60%,#050506);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 0 60px rgba(198,241,53,.25), inset 0 1px 0 rgba(255,255,255,.12);
+  transform:scale(.7);opacity:0;
+  transition:transform .45s cubic-bezier(.22,1,.36,1), opacity .45s ease;
+}
+.transition-overlay.active .transition-badge{transform:scale(1);opacity:1}
+
+:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important}
+  .reveal-card{ opacity:1!important; transform:none!important; }
+  .scroll-cue .arrow-down{ animation:none!important; }
+  .intro{ opacity:1!important; animation:none!important; transform:none!important; }
+}
+@media(max-width:520px){
+  .hero{padding:140px 20px 50px}
+  .tile{width:132px;height:132px;border-radius:34px;font-size:58px}
+  .sub{font-size:14.5px}
+  .sequence{ gap:16vh; }
+}
+</style>
+</head>
+<body>
+<nav class="side-rail">
+  <div class="rail-tile">🎒</div>
+  <div class="rail-nav">
+    <a href="#top">홈</a>
+    <a href="#cardsSequence">기능</a>
+    <a href="./smart-prep-alarm.html">시작</a>
+  </div>
+</nav>
+
+<div class="hero" id="top">
+  <div class="spectrum"></div>
+  <div class="glow"></div>
+
+  <div class="tile intro intro-1">🎒</div>
+  <p class="eyebrow intro intro-2">Smart Prep Alarm</p>
+
+  <h1 class="headline intro intro-3">
+    <span class="l1">놓치지 않는 준비물,</span>
+    <span class="l2">놓치지 않는 알람.</span>
+  </h1>
+
+  <p class="sub intro intro-4">
+    채팅 캡처 한 장이면 충분합니다. 사진 속 날짜와 준비물을 자동으로 읽어내고,
+    정해진 시간이 되면 소리와 화면 알람으로 알려드립니다.
+    분석부터 알람까지 전부 이 브라우저 안에서 처리되어, 별도 로그인이나 앱 설치가 필요 없습니다.
+  </p>
+
+  <div class="badge intro intro-5">
+    <span class="badge-icon">🔔</span>
+    OCR 자동 인식 &amp; 소리·화면 알람 탑재
+  </div>
+
+  <button class="cta intro intro-6" id="startBtn" type="button">
+    Smart Prep Alarm 시작하기 <span class="arrow">→</span>
+  </button>
+
+  <p class="foot-note intro intro-7">Chrome / Edge 최신 브라우저에서 알림 권한을 허용하면 가장 잘 작동합니다.</p>
+
+  <div class="scroll-cue"><span>스크롤해서 더 알아보기</span><span class="arrow-down"></span></div>
+</div>
+
+<div class="sequence-wrap">
+  <div class="sequence-head">
+    <p class="kicker">HOW IT WORKS</p>
+    <h2>기능과 사용법을 하나씩 살펴보세요</h2>
+  </div>
+  <div class="sequence" id="cardsSequence">
+    <article class="reveal-card" data-index="0" data-dir="left">
+      <div class="num">FEATURE 01</div>
+      <h3>Tesseract OCR 엔진</h3>
+      <p>온디바이스 한글·영문 광학 문자인식으로 스크린샷 속 글자를 오차 없이 읽어내요.</p>
+    </article>
+    <article class="reveal-card" data-index="1" data-dir="right">
+      <div class="num">FEATURE 02</div>
+      <h3>준비물 명사 필터</h3>
+      <p>학용품, 교과서, 준비 행동 서술어를 정밀 대조해서 진짜 필요한 물품만 골라내요.</p>
+    </article>
+    <article class="reveal-card" data-index="2" data-dir="up">
+      <div class="num">FEATURE 03</div>
+      <h3>Web Audio 경보음</h3>
+      <p>외부 음원 파일 없이 브라우저가 직접 합성한 소리로 맑고 또렷하게 울려요.</p>
+    </article>
+    <article class="reveal-card" data-index="3" data-dir="left">
+      <div class="num">STEP 01</div>
+      <h3>대화 스크린샷 첨부</h3>
+      <p>선생님 알림장이나 단체 채팅방을 캡처해서 올리기만 하면 돼요.</p>
+    </article>
+    <article class="reveal-card" data-index="4" data-dir="right">
+      <div class="num">STEP 02</div>
+      <h3>자동 인식 및 검토</h3>
+      <p>추출된 준비물과 날짜를 눈으로 확인하고, 필요하면 바로 고칠 수 있어요.</p>
+    </article>
+    <article class="reveal-card" data-index="5" data-dir="up">
+      <div class="num">STEP 03</div>
+      <h3>소리 &amp; 알람 창 수신</h3>
+      <p>정해둔 시간이 되면 소리와 화면 알람 창이 함께 떠서 절대 놓치지 않아요.</p>
+    </article>
+  </div>
+</div>
+
+<div id="seqControl">
+  <span class="progress-label mono"><b id="revealCount">0</b> / 6 노출됨</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <button id="nextCardBtn" type="button" aria-label="다음 카드 보기">↓</button>
+</div>
+
+<div class="transition-overlay" id="pageTransition">
+  <div class="transition-badge">🎒</div>
+</div>
+
+<script>
+(function(){
+  var cta = document.getElementById('startBtn');
+  var overlay = document.getElementById('pageTransition');
+  cta.addEventListener('click', function(){
+    overlay.classList.add('active');
+    setTimeout(function(){ window.location.href = './smart-prep-alarm.html'; }, 480);
+  });
+  window.addEventListener('pageshow', function(evt){
+    if (evt.persisted) overlay.classList.remove('active');
+  });
+
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.reveal-card'));
+  var seen = new Set();
+  var TOTAL = cards.length;
+
+  function updateProgress(){
+    document.getElementById('revealCount').textContent = seen.size;
+    document.getElementById('progressFill').style.width = (seen.size/TOTAL*100)+'%';
+    if(seen.size >= TOTAL) document.getElementById('seqControl').classList.add('hide');
+  }
+
+  if('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('visible');
+          seen.add(entry.target.dataset.index);
+          updateProgress();
+        }
+      });
+    }, {threshold:0.35});
+    cards.forEach(function(c){ io.observe(c); });
+  }else{
+    cards.forEach(function(c){ c.classList.add('visible'); seen.add(c.dataset.index); });
+    updateProgress();
+  }
+
+  document.getElementById('nextCardBtn').addEventListener('click', function(){
+    var next = cards.find(function(c){ return !c.classList.contains('visible'); });
+    if(next) next.scrollIntoView({behavior:'smooth', block:'center'});
+    else window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
+  });
+
+  /* subtle parallax on the hero glow + spectrum as the page scrolls past them */
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduceMotion){
+    var glowEl = document.querySelector('.glow');
+    var spectrumEl = document.querySelector('.spectrum');
+    var ticking = false;
+    window.addEventListener('scroll', function(){
+      if(ticking) return;
+      ticking = true;
+      requestAnimationFrame(function(){
+        var y = window.scrollY;
+        if(glowEl) glowEl.style.transform = 'translate(-50%,'+(y*0.18)+'px)';
+        if(spectrumEl) spectrumEl.style.transform = 'translateX(-50%) translateY('+(y*0.08)+'px)';
+        ticking = false;
+      });
+    }, {passive:true});
+  }
+})();
+</script>
+</body>
+</html>

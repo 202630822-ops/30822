@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Prep Alarm — 준비물 알림</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{
+  --bg:#f5f7f2;
+  --surface:#ffffff;
+  --surface-2:#f0f3ec;
+  --surface-3:#e8ede3;
+  --text:#171a15;
+  --text-2:#62695c;
+  --text-3:#8b9185;
+  --line:#e0e5da;
+  --accent:#b9e63a;
+  --accent-2:#d7f57d;
+  --accent-dark:#6f9413;
+  --danger:#ef6d63;
+  --shadow:0 18px 50px rgba(30,45,16,.07);
+  --shadow-sm:0 7px 24px rgba(30,45,16,.06);
+  --radius-xl:26px;
+  --radius-lg:20px;
+  --radius-md:15px;
+  --radius-sm:11px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;
+  padding-bottom:72px;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 82% 7%, rgba(185,230,58,.18), transparent 22%),
+    radial-gradient(circle at 8% 34%, rgba(215,245,125,.12), transparent 20%),
+    var(--bg);
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:linear-gradient(180deg,rgba(255,255,255,.5),transparent 30%)}
+button,input,textarea{font:inherit}
+button{border:0}
+:focus-visible{outline:3px solid rgba(185,230,58,.65);outline-offset:3px}
+
+/* ---------- topbar ---------- */
+#topbar{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:14px clamp(18px,5vw,64px);
+  background:rgba(255,255,255,.84);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(224,229,218,.82);
+}
+.brand a{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;font-weight:850;letter-spacing:-.02em}
+.brand-tile{
+  width:38px;height:38px;display:grid;place-items:center;border-radius:13px;font-size:19px;
+  background:linear-gradient(145deg,#f7ffe2,#dff6a0);
+  border:1px solid #d6e9aa;box-shadow:0 8px 18px rgba(145,182,42,.18);
+}
+.brand-name{font-size:15.5px}
+#topbar-right{display:flex;align-items:center;gap:10px}
+#clock{font-size:14px;color:var(--text-2);letter-spacing:.02em}
+#notifBtn,.top-pill{
+  cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text);
+  min-height:38px;padding:9px 13px;border-radius:999px;font-size:12.5px;font-weight:800;
+  box-shadow:0 3px 12px rgba(20,30,10,.04);transition:.18s ease;
+}
+#notifBtn:hover{transform:translateY(-1px);border-color:#cad6b9;background:#fbfdf8}
+
+/* ---------- page ---------- */
+main{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding:34px clamp(18px,5vw,56px) 0}
+section{margin:0 0 42px}
+
+/* ---------- hero ---------- */
+.hero{
+  display:grid;grid-template-columns:1.5fr .85fr;gap:18px;align-items:stretch;
+  margin-bottom:30px;
+}
+.hero-main,.hero-side{background:rgba(255,255,255,.88);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:var(--radius-xl)}
+.hero-main{padding:30px 32px;position:relative;overflow:hidden}
+.hero-main::after{content:"";position:absolute;width:220px;height:220px;right:-60px;top:-70px;border-radius:50%;background:radial-gradient(circle,rgba(185,230,58,.36),transparent 70%);pointer-events:none}
+.hero-kicker{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;background:#f1f7e5;color:#6d7f42;font-size:11.5px;font-weight:850;letter-spacing:.02em;margin-bottom:14px}
+.hero-main h1{margin:0;font-size:clamp(29px,4.2vw,43px);line-height:1.1;letter-spacing:-.045em}
+.hero-main h1{overflow:visible;min-height:1.12em}
+.hero-main h1 span{color:var(--accent-dark)}
+.hero-headline-intro{animation:heroDropIn .9s cubic-bezier(.18,.8,.25,1) both}
+@keyframes heroDropIn{0%{opacity:0;transform:translateY(-52px)}60%{opacity:1;transform:translateY(7px)}100%{opacity:1;transform:translateY(0)}}
+.hero-cycle-out{animation:heroHeadlineOut .28s cubic-bezier(.4,0,1,1) both}
+@keyframes heroHeadlineOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(18px)}}
+.hero-cycle-in{animation:heroHeadlineIn .58s cubic-bezier(.18,.8,.25,1) both}
+@keyframes heroHeadlineIn{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
+.hero-accent-inline{color:var(--accent-dark);font-weight:950}
+.hero-sub{margin:12px 0 22px;color:var(--text-2);font-size:14px;line-height:1.7;max-width:560px}
+.hero-summary{display:flex;flex-wrap:wrap;gap:10px}
+.summary-pill{display:flex;align-items:center;gap:9px;padding:10px 13px;border:1px solid var(--line);border-radius:14px;background:#fbfcfa;min-width:145px}
+.summary-icon{font-size:17px}
+.summary-label{font-size:11px;color:var(--text-3);display:block;margin-bottom:2px}
+.summary-value{font-size:13px;font-weight:850;display:block}
+.hero-side{padding:22px;display:flex;flex-direction:column;justify-content:space-between;min-height:220px}
+.hero-side-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hero-side h3{margin:0;font-size:14px}
+.hero-date{font-size:12px;color:var(--text-3);margin-top:4px}
+.hero-items{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.hero-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;background:var(--surface-2);font-size:13px;font-weight:750}
+.hero-item .bullet{width:7px;height:7px;border-radius:50%;background:var(--accent-dark);box-shadow:0 0 0 4px rgba(185,230,58,.2);flex:0 0 auto}
+.hero-empty{color:var(--text-3);font-size:12.5px;line-height:1.6}
+.hero-cta{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;text-decoration:none;color:var(--text);font-size:12.5px;font-weight:850;border:1px solid var(--line);background:#fff;padding:10px 13px;border-radius:12px;width:max-content}
+
+/* ---------- headings ---------- */
+.section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:15px}
+h2{font-size:21px;line-height:1.15;font-weight:900;letter-spacing:-.035em;margin:0}
+.section-desc{color:var(--text-2);font-size:13px;line-height:1.6;margin:7px 0 0}
+.step-label{display:inline-flex;align-items:center;gap:8px;color:var(--accent-dark);font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
+.step-label::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent-dark)}
+
+/* ---------- input area ---------- */
+.input-shell{background:rgba(255,255,255,.76);border:1px solid var(--line);border-radius:var(--radius-lg);padding:15px;box-shadow:var(--shadow-sm)}
+.tabs{display:flex;gap:4px;padding:4px;background:var(--surface-2);border-radius:13px;margin-bottom:14px}
+.tab-btn{appearance:none;cursor:pointer;flex:1;background:transparent;color:var(--text-2);padding:11px 15px;border-radius:10px;font-size:13px;font-weight:850;transition:.18s ease}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(30,45,16,.07)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+#dropzone{
+  min-height:245px;border:1.5px dashed #cdd6c5;border-radius:18px;padding:36px 18px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;
+  background:linear-gradient(180deg,#fcfdfb,#f7f9f4);transition:.2s ease;
+}
+#dropzone:hover,#dropzone.drag{border-color:#accf5c;background:linear-gradient(180deg,#fbfeeF,#f0f6e6);transform:translateY(-1px)}
+#dropzone .upload-icon{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:#eef6dc;border:1px solid #ddecc0;font-size:24px;margin-bottom:14px}
+#dropzone p{margin:5px 0;color:var(--text-3);font-size:12.5px}
+#dropzone .big{color:var(--text);font-size:15px;font-weight:850}
+.upload-hint{margin-top:9px!important;padding:7px 11px;background:#fff;border:1px solid var(--line);border-radius:999px}
+#imgPreviewWrap{margin-top:14px;text-align:center;display:none;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2)}
+#imgPreviewWrap img{max-width:100%;max-height:300px;border-radius:12px;display:block;margin:0 auto;border:1px solid var(--line)}
+#imgPreviewWrap button{display:block;margin:10px auto 0;background:transparent;color:var(--danger);cursor:pointer;font-size:12px;font-weight:800}
+textarea#chatText{width:100%;min-height:175px;resize:vertical;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:16px;font-size:14px;line-height:1.7;font-family:inherit;box-shadow:inset 0 1px 0 rgba(0,0,0,.02)}
+textarea#chatText::placeholder{color:#a1a69c}
+.primary-btn{appearance:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--text);color:#fff;font-weight:850;font-size:13.5px;padding:12px 18px;border-radius:12px;margin-top:14px;box-shadow:0 8px 18px rgba(22,28,18,.12);transition:.18s ease}
+.primary-btn:hover:not(:disabled){transform:translateY(-1px);background:#252c20;box-shadow:0 11px 22px rgba(22,28,18,.16)}
+.primary-btn:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+.ghost-btn{appearance:none;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--text);font-size:12.5px;font-weight:800;padding:10px 13px;border-radius:11px;transition:.18s ease}
+.ghost-btn:hover{background:#fbfcfa;transform:translateY(-1px)}
+#ocrProgress{display:none;margin-top:14px}
+#ocrProgress .bar-track{height:7px;background:var(--surface-3);border-radius:8px;overflow:hidden}
+#ocrProgress .bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#d9f77e);border-radius:8px;transition:width .2s ease}
+#ocrProgress p{margin:8px 0 0;font-size:11.5px;color:var(--text-3)}
+
+/* ---------- OCR completion animation ---------- */
+#ocrComplete{
+  display:none;
+  position:relative;
+  margin-top:14px;
+  border:1px solid #dce6cf;
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(185,230,58,.18), transparent 34%),
+    linear-gradient(145deg,#fbfdf8,#f3f8ec);
+  overflow:hidden;
+  min-height:168px;
+  padding:24px 22px 20px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 8px 24px rgba(61,84,25,.05);
+}
+#ocrComplete.show{display:block;animation:ocrPanelIn .98s cubic-bezier(.18,.8,.24,1) both}
+#ocrComplete::before{
+  content:"";position:absolute;left:-30%;top:0;width:24%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(185,230,58,.22),transparent);
+  transform:skewX(-18deg);opacity:0;
+}
+#ocrComplete.show::before{animation:ocrSweep 1.15s .15s ease-out both}
+.ocr-complete-inner{display:flex;align-items:center;gap:17px;position:relative;z-index:1}
+.ocr-check-wrap{
+  position:relative;width:70px;height:70px;flex:0 0 70px;display:grid;place-items:center;
+}
+.ocr-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(111,148,19,.16);background:rgba(255,255,255,.62)}
+.ocr-ring::after{
+  content:"";position:absolute;inset:5px;border-radius:50%;border:2px dashed rgba(111,148,19,.22);animation:ocrSpin 5s linear infinite;
+}
+.ocr-check{
+  position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(145deg,#c9ef64,#9dce35);color:#274000;font-size:24px;font-weight:950;
+  box-shadow:0 8px 18px rgba(118,153,30,.22);transform:scale(.6);opacity:0;
+}
+.ocr-check::after{
+  content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(185,230,58,.32);transform:scale(.7);opacity:0;
+}
+#ocrComplete.show .ocr-check{animation:ocrCheckPop 1.02s .16s cubic-bezier(.18,.89,.3,1.25) forwards}
+#ocrComplete.show .ocr-check::after{animation:ocrRipple 1.2s .33s ease-out forwards}
+.ocr-complete-copy{min-width:0}
+.ocr-complete-eyebrow{font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--accent-dark);margin-bottom:5px;text-transform:uppercase}
+.ocr-complete-title{margin:0;font-size:20px;letter-spacing:-.035em;font-weight:950}
+.ocr-complete-title span{color:var(--accent-dark)}
+.ocr-complete-desc{margin:6px 0 0;color:var(--text-2);font-size:12.5px;line-height:1.55}
+.ocr-found-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.ocr-found-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;background:#fff;border:1px solid #e0e8d7;color:#4d5d36;font-size:11.5px;font-weight:800;opacity:0;transform:translateY(8px)}
+#ocrComplete.show .ocr-found-chip{animation:ocrChipIn .88s cubic-bezier(.18,.8,.25,1) forwards}
+#ocrComplete.show .ocr-found-chip:nth-child(1){animation-delay:.48s}
+#ocrComplete.show .ocr-found-chip:nth-child(2){animation-delay:.56s}
+#ocrComplete.show .ocr-found-chip:nth-child(3){animation-delay:.64s}
+#ocrComplete.show .ocr-found-chip:nth-child(4){animation-delay:.72s}
+#ocrComplete.show .ocr-found-chip:nth-child(5){animation-delay:.80s}
+.ocr-complete-noresult{display:none}
+#ocrComplete.no-result .ocr-complete-eyebrow{color:#aa6b32}
+#ocrComplete.no-result .ocr-check{background:linear-gradient(145deg,#f7dc9d,#ecc476);color:#754d17}
+#ocrComplete.no-result .ocr-complete-title span{color:#a96d24}
+#ocrComplete.no-result .ocr-complete-noresult{display:block}
+#ocrComplete.no-result .ocr-found-list{display:none}
+.ocr-result-glow{position:absolute;width:110px;height:110px;border-radius:50%;right:-26px;bottom:-55px;background:rgba(185,230,58,.13);filter:blur(2px)}
+@keyframes ocrPanelIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ocrSweep{0%{left:-30%;opacity:0}15%{opacity:1}100%{left:120%;opacity:0}}
+@keyframes ocrCheckPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes ocrRipple{0%{transform:scale(.7);opacity:.55}100%{transform:scale(1.55);opacity:0}}
+@keyframes ocrSpin{to{transform:rotate(360deg)}}
+@keyframes ocrChipIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){
+  #ocrComplete.show,#ocrComplete.show::before,.ocr-ring::after,#ocrComplete.show .ocr-check,#ocrComplete.show .ocr-check::after,#ocrComplete.show .ocr-found-chip{animation:none!important}
+  #ocrComplete.show .ocr-check,.ocr-found-chip{opacity:1;transform:none}
+}
+
+/* ---------- review ---------- */
+#reviewSection{display:none}
+.review-wrap{display:grid;gap:12px}
+.review-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:17px 18px;box-shadow:var(--shadow-sm);transition:.18s ease}
+.review-card:hover{transform:translateY(-1px);border-color:#cad7ba}
+.review-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.review-card-head .date-label{font-weight:900;font-size:14px;letter-spacing:-.02em}
+.review-card-head input[type=date]{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:7px 9px;font-family:inherit;font-size:12px}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#f6f8f3;border:1px solid #e1e6dc;padding:7px 8px 7px 11px;border-radius:999px;font-size:12.5px;font-weight:750}
+.chip button{appearance:none;border:0;background:#ecefe8;color:#7f8678;width:19px;height:19px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;transition:.16s ease}
+.chip button:hover{background:#f6d9d6;color:#b64c44}
+.add-item-row{display:flex;gap:8px}.add-item-row input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px}.add-item-row input::placeholder{color:#a0a69b}.add-item-row button{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:10px;padding:10px 13px;font-size:12.5px;font-weight:850;cursor:pointer}.add-item-row button:hover{background:var(--surface-2)}
+.review-alarm-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 12px;padding:10px 11px;border:1px solid var(--line);background:#fafbf8;border-radius:13px}
+.review-alarm-meta{display:flex;align-items:center;gap:8px;min-width:120px;flex:1}
+.review-alarm-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:#eef6dc;border:1px solid #dcecb8;font-size:14px}
+.review-alarm-copy strong{display:block;font-size:12.5px;line-height:1.2}.review-alarm-copy small{display:block;color:var(--text-3);font-size:10.5px;margin-top:3px}
+.alarm-toggle{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;font-weight:850;color:var(--text-2);user-select:none}
+.alarm-toggle input{width:16px;height:16px;accent-color:var(--accent-dark);margin:0}
+.review-alarm-time{width:100%;height:48px;padding:0 13px;border:0;border-radius:13px;background:transparent;color:var(--text);font-family:'Space Mono',monospace;font-size:18px;font-weight:800;letter-spacing:.02em;min-width:118px;cursor:pointer;text-align:center;position:relative;z-index:2}
+.review-alarm-time:disabled{opacity:.42;cursor:not-allowed}
+.beautiful-time-picker{display:flex;align-items:center;gap:10px;min-width:168px;padding:5px 6px 5px 11px;border:1px solid #d9e3cb;border-radius:16px;background:linear-gradient(145deg,#ffffff,#f5f8f0);box-shadow:0 7px 18px rgba(71,95,36,.07);transition:.18s ease}
+.beautiful-time-picker:hover{border-color:#bfd59a;box-shadow:0 10px 22px rgba(71,95,36,.11);transform:translateY(-1px)}
+.beautiful-time-picker:focus-within{border-color:#9fc85c;box-shadow:0 0 0 4px rgba(185,230,58,.16),0 10px 24px rgba(71,95,36,.09)}
+.time-picker-icon{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border-radius:10px;background:#eef7d9;border:1px solid #dbeab6;font-size:14px}
+.time-picker-stack{display:flex;flex-direction:column;gap:2px;min-width:42px;flex:1}
+.time-picker-caption{font-size:9.5px;color:var(--text-3);font-weight:800;letter-spacing:.02em}
+.time-picker-caption-value{font-size:10px;color:var(--text-2);font-weight:700;white-space:nowrap}
+.time-picker-quick{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;width:100%}
+.time-picker-quick button{appearance:none;border:1px solid #dde5d4;background:#fbfcfa;color:#6e7668;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;cursor:pointer;transition:.16s ease}
+.time-picker-quick button:hover{background:#eef6dc;border-color:#cfe0ae;color:#5c761e;transform:translateY(-1px)}
+.time-picker-quick button.active{background:#eaf6cc;border-color:#b9d879;color:#5e7a20;box-shadow:inset 0 0 0 1px rgba(143,176,60,.08)}
+.review-time-cluster{display:flex;flex-direction:column;align-items:flex-end;gap:0;min-width:190px}
+.review-time-cluster.disabled{opacity:.55}
+#registerBtn{box-shadow:0 10px 24px rgba(72,98,19,.16)}
+#reviewActions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:4px}
+
+/* ---------- calendar ---------- */
+.calendar-shell{background:rgba(255,255,255,.76);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-sm)}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.cal-head .title{font-weight:900;font-size:16px;letter-spacing:-.02em}.cal-nav{appearance:none;cursor:pointer;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--text);width:35px;height:35px;border-radius:11px;font-size:17px;transition:.18s ease;padding:0}.cal-nav:hover{background:var(--surface-2);transform:translateY(-1px)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.cal-dow{text-align:center;font-size:11px;color:var(--text-3);padding:4px 0}.cal-cell{min-height:84px;border-radius:13px;border:1px solid var(--line);background:var(--surface);padding:9px;cursor:pointer;position:relative;display:flex;flex-direction:column;justify-content:space-between;transition:.18s ease}.cal-cell:hover{border-color:#bfd0ad;transform:translateY(-1px);box-shadow:var(--shadow-sm)}.cal-cell.empty{background:transparent;border:none;cursor:default;box-shadow:none}.cal-cell.today{background:#f3f8e9;border-color:#bdd774}.cal-cell.selected{background:#edf5de;border-color:#9bbf43;box-shadow:0 0 0 2px rgba(185,230,58,.15)}.cal-cell .num{font-size:12px;font-weight:850}.cal-cell .badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.dot{width:7px;height:7px;border-radius:50%;background:var(--accent-dark);box-shadow:0 0 0 4px rgba(185,230,58,.18)}.cal-cell .alarm-ico{font-size:11px}
+#dayPanel{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:none;box-shadow:var(--shadow-sm)}#dayPanel .dp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}#dayPanel .dp-title{font-weight:900;font-size:14px}#dayPanel .dp-close{background:var(--surface-2);border:1px solid var(--line);color:var(--text-2);cursor:pointer;font-size:14px;width:30px;height:30px;border-radius:50%}.alarm-time-row{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-bottom:15px}.alarm-time-row label{font-size:12.5px!important;color:var(--text-2)!important;font-weight:850}.alarm-time-row .day-time-shell{display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid #d9e3cb;border-radius:17px;background:linear-gradient(145deg,#ffffff,#f5f8f0);box-shadow:0 7px 20px rgba(71,95,36,.06)}.day-time-main{display:flex;align-items:center;gap:9px}.alarm-time-row input[type=time]{flex:1;background:transparent;color:var(--text);border:0;border-radius:11px;padding:7px 6px;font-family:'Space Mono',monospace;font-size:20px;font-weight:800;letter-spacing:.02em}.alarm-time-row input[type=time]:focus{outline:none}.day-time-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:#eef7d9;border:1px solid #dbeab6;font-size:15px}.day-time-note{font-size:10px;color:var(--text-3);padding-left:43px}.day-time-quick{display:flex;gap:6px;flex-wrap:wrap}.day-time-quick button{appearance:none;border:1px solid #dde5d4;background:#fbfcfa;color:#6e7668;padding:6px 9px;border-radius:999px;font-size:10.5px;font-weight:850;cursor:pointer;transition:.16s ease}.day-time-quick button:hover{background:#eef6dc;border-color:#cfe0ae;color:#5c761e;transform:translateY(-1px)}.day-time-quick button.active{background:#eaf6cc;border-color:#b9d879;color:#5e7a20}
+.dp-item-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.dp-item-row:last-of-type{border-bottom:none}.dp-item-row input[type=checkbox]{accent-color:#92ba2a;width:16px;height:16px}.dp-item-row .name{flex:1;font-size:13.5px;font-weight:650}.dp-item-row .name.done{text-decoration:line-through;color:var(--text-3)}.dp-item-row button.del{background:transparent;border:0;color:var(--danger);cursor:pointer;font-size:11.5px;font-weight:800}.del-day-btn{margin-top:13px;background:transparent;border:0;color:var(--danger);font-size:11.5px;cursor:pointer;font-weight:800}
+
+/* ---------- list ---------- */
+.list-wrap{display:grid;gap:10px}.list-row{display:flex;align-items:flex-start;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:17px;padding:15px 16px;cursor:pointer;box-shadow:var(--shadow-sm);transition:.18s ease}.list-row:hover{transform:translateY(-1px);border-color:#cad6bc}.list-row .lr-date{min-width:84px;font-weight:900;font-size:12.5px;color:var(--text)}.list-row .lr-time{font-size:11.5px;color:var(--accent-dark);margin-top:4px}.list-row .lr-items{flex:1;display:flex;flex-wrap:wrap;gap:7px}.list-row .lr-items span{background:var(--surface-2);padding:6px 10px;border-radius:999px;font-size:11.5px;color:var(--text-2);font-weight:700}#emptyList{color:var(--text-3);font-size:13px;text-align:center;padding:35px 0}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:#1b2018;color:#fff;padding:11px 16px;border-radius:999px;font-size:12.5px;box-shadow:0 15px 30px rgba(0,0,0,.16);opacity:0;pointer-events:none;transition:.22s ease;z-index:100}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- alarm modal ---------- */
+#alarmOverlay{position:fixed;inset:0;background:rgba(17,22,13,.48);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+#alarmCard{background:var(--surface);border:1px solid #d5dfca;border-radius:25px;padding:30px 25px;max-width:410px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(21,27,16,.23);animation:pulseCard 1.4s ease-in-out infinite}
+@keyframes pulseCard{0%,100%{box-shadow:0 30px 80px rgba(21,27,16,.19),0 0 0 0 rgba(185,230,58,.35)}50%{box-shadow:0 30px 80px rgba(21,27,16,.19),0 0 0 12px rgba(185,230,58,0)}}
+#alarmCard .alarm-icon{width:62px;height:62px;border-radius:19px;display:grid;place-items:center;margin:0 auto 13px;background:#eff7dc;border:1px solid #dcecb8;font-size:28px}#alarmCard h3{font-size:20px;margin:0 0 5px;letter-spacing:-.035em}#alarmCard .alarm-date{color:var(--text-3);font-size:12px;margin-bottom:17px}#alarmItemList{text-align:left;margin:0 0 21px}#alarmItemList .ai-row{background:var(--surface-2);border:1px solid #e0e6d8;border-radius:12px;padding:11px 13px;margin-bottom:7px;font-size:13px;font-weight:750}.alarm-actions{display:flex;gap:9px}.alarm-actions button{flex:1;appearance:none;border:0;cursor:pointer;border-radius:11px;padding:12px 0;font-weight:850;font-size:13px}.alarm-actions #snoozeBtn{background:var(--surface-2);color:var(--text)}.alarm-actions #dismissBtn{background:var(--text);color:#fff}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,#alarmCard{animation:none!important;transition:none!important}.hero-cycle-out,.hero-cycle-in{animation:none!important;opacity:1!important;transform:none!important}}
+@media (max-width:780px){.hero{grid-template-columns:1fr}.hero-side{min-height:0}.hero-main{padding:26px 22px}.cal-cell{min-height:70px;padding:7px}.cal-cell .num{font-size:11px}}
+@media (max-width:560px){#topbar{padding:11px 14px}.brand-name{font-size:14px}#clock{display:none}main{padding-top:22px}.hero-main h1{font-size:31px}.section-head{align-items:start;flex-direction:column;gap:4px}.cal-grid{gap:4px}.cal-cell{min-height:58px;border-radius:10px}.list-row{flex-direction:column;gap:10px}.list-row .lr-date{min-width:0}.hero-summary{display:grid;grid-template-columns:1fr 1fr}.summary-pill{min-width:0}}
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <div class="brand"><a href="./index.html"><span class="brand-tile">🎒</span><span class="brand-name">Smart Prep Alarm</span></a></div>
+    <div id="topbar-right">
+      <span id="clock" class="mono">00:00</span>
+      <button id="notifBtn" type="button">🔔 알림 켜기</button>
+    </div>
+  </div>
+
+  <main>
+    <section class="hero" aria-label="오늘의 요약">
+      <div class="hero-main">
+        <div class="hero-kicker">SMART PREP · DAILY CHECK</div>
+        <h1 id="heroHeadline" class="hero-headline-intro">준비물, <span>미리 챙겨두세요.</span></h1>
+        <p class="hero-sub">채팅 스크린샷이나 대화 내용을 넣으면 준비물만 골라서 일정으로 정리해드려요.</p>
+        <div class="hero-summary">
+          <div class="summary-pill"><span class="summary-icon">📅</span><div><span class="summary-label">오늘</span><span id="heroToday" class="summary-value">-</span></div></div>
+          <div class="summary-pill"><span class="summary-icon">🎒</span><div><span class="summary-label">다가오는 일정</span><span id="heroUpcoming" class="summary-value">0개</span></div></div>
+          <div class="summary-pill"><span class="summary-icon">⏰</span><div><span class="summary-label">알람 상태</span><span id="heroAlarmStatus" class="summary-value">확인 필요</span></div></div>
+        </div>
+      </div>
+
+      <div class="hero-side">
+        <div>
+          <div class="hero-side-top"><div><h3>가장 가까운 준비물</h3><div id="heroNextDate" class="hero-date">등록된 일정이 없어요</div></div><span>✦</span></div>
+          <div id="heroItems" class="hero-items"><div class="hero-empty">아직 등록된 준비물이 없어요.<br>아래에서 채팅을 분석해보세요.</div></div>
+        </div>
+        <a href="#inputSection" class="hero-cta">+ 준비물 찾기</a>
+      </div>
+    </section>
+
+    <section id="inputSection">
+      <div class="section-head">
+        <div><div class="step-label">STEP 01</div><h2>준비물 찾기</h2><p class="section-desc">채팅 스크린샷을 올리거나, 대화 내용을 직접 붙여넣으세요.</p></div>
+      </div>
+      <div class="input-shell">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="imgTab" type="button">📷 스크린샷 분석</button>
+          <button class="tab-btn" data-tab="textTab" type="button">✍️ 대화 텍스트</button>
+        </div>
+
+        <div class="tab-panel active" id="imgTab">
+          <div id="dropzone" tabindex="0" role="button" aria-label="이미지 올리기">
+            <div class="upload-icon">📸</div>
+            <p class="big">스크린샷을 여기에 놓아주세요</p>
+            <p>클릭해서 이미지를 선택하거나 드래그해서 업로드</p>
+            <p class="upload-hint">Ctrl + V 붙여넣기 · 한국어 + 영어 OCR</p>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" style="display:none" />
+          <div id="imgPreviewWrap">
+            <img id="imgPreview" alt="업로드한 이미지 미리보기" />
+            <button id="removeImgBtn" type="button">이미지 지우기</button>
+          </div>
+          <div id="ocrProgress">
+            <div class="bar-track"><div class="bar-fill" id="ocrBarFill"></div></div>
+            <p id="ocrStatus">대기 중…</p>
+          </div>
+          <div id="ocrComplete" aria-live="polite">
+            <div class="ocr-result-glow"></div>
+            <div class="ocr-complete-inner">
+              <div class="ocr-check-wrap">
+                <div class="ocr-ring"></div>
+                <div class="ocr-check">✓</div>
+              </div>
+              <div class="ocr-complete-copy">
+                <div class="ocr-complete-eyebrow">OCR ANALYSIS COMPLETE</div>
+                <h3 class="ocr-complete-title">준비물 <span id="ocrFoundCount">0개</span>를 찾았어요</h3>
+                <p class="ocr-complete-desc">채팅에서 필요한 준비물만 골라냈어요. 잠시 후 확인 화면으로 이동합니다.</p>
+                <div class="ocr-found-list" id="ocrFoundList"></div>
+                <p class="ocr-complete-desc ocr-complete-noresult">등록된 준비물 후보가 없어요. 확인 화면에서 직접 추가할 수 있어요.</p>
+              </div>
+            </div>
+          </div>
+          <button class="primary-btn" id="analyzeImgBtn" type="button" disabled>🔎 이미지 분석하기</button>
+        </div>
+
+        <div class="tab-panel" id="textTab">
+          <textarea id="chatText" placeholder="예) 얘들아 내일 미술시간에 색종이랑 가위 가져오고, 이번주 금요일까지 줄넘기 챙겨오세요!"></textarea>
+          <button class="primary-btn" id="analyzeTextBtn" type="button">✨ 대화 분석하기</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="reviewSection">
+      <div class="section-head"><div><div class="step-label">STEP 02</div><h2>찾은 준비물 확인</h2><p class="section-desc">잘못 인식된 항목은 지우고, 필요한 준비물은 직접 추가할 수 있어요.</p></div></div>
+      <div id="reviewGroups" class="review-wrap"></div>
+      <div id="reviewActions">
+        <button class="ghost-btn" id="addDateGroupBtn" type="button">+ 날짜 그룹 추가</button>
+        <button class="primary-btn" id="registerBtn" type="button" style="margin-top:0">일정에 등록하기 →</button>
+      </div>
+    </section>
+
+    <section id="calendarSection">
+      <div class="section-head"><div><div class="step-label">STEP 03</div><h2>일정 확인</h2><p class="section-desc">준비물이 있는 날을 확인하고, 날짜를 눌러 알람 시간을 정하세요.</p></div></div>
+      <div class="calendar-shell">
+        <div class="cal-head">
+          <button class="cal-nav" id="prevMonth" type="button" aria-label="이전 달"><span>‹</span></button>
+          <div class="title" id="calTitle">2026년 9월</div>
+          <button class="cal-nav" id="nextMonth" type="button" aria-label="다음 달"><span>›</span></button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+
+        <div id="dayPanel">
+          <div class="dp-head"><span class="dp-title" id="dpTitle"></span><button class="dp-close" id="dpClose" type="button" aria-label="닫기">✕</button></div>
+          <div class="alarm-time-row">
+          <label for="dpAlarmTime">알람 시간</label>
+          <div class="day-time-shell">
+            <div class="day-time-main">
+              <span class="day-time-icon">⏰</span>
+              <input type="time" id="dpAlarmTime" aria-label="알람 시간" />
+            </div>
+            <div class="day-time-note">준비물 챙길 시간을 미리 정해두세요.</div>
+            <div class="day-time-quick" id="dpAlarmQuick">
+              <button type="button" data-time="07:00">07:00</button>
+              <button type="button" data-time="07:30">07:30</button>
+              <button type="button" data-time="08:00">08:00</button>
+              <button type="button" data-time="18:00">18:00</button>
+            </div>
+          </div>
+        </div>
+          <div id="dpItems"></div>
+          <div class="add-item-row" style="margin-top:12px;"><input type="text" id="dpAddInput" placeholder="준비물 직접 추가" /><button id="dpAddBtn" type="button">추가</button></div>
+          <button class="del-day-btn" id="dpDeleteDay" type="button">이 날짜 전체 삭제</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="listSection">
+      <div class="section-head"><div><div class="step-label">STEP 04</div><h2>다가오는 준비물</h2><p class="section-desc">오늘부터 예정된 준비물을 한눈에 확인하세요.</p></div></div>
+      <div id="listRows" class="list-wrap"></div>
+      <p id="emptyList" style="display:none;">아직 등록된 준비물이 없어요. 위에서 대화를 분석해보세요.</p>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+
+  <div id="alarmOverlay">
+    <div id="alarmCard">
+      <div class="alarm-icon">⏰</div>
+      <h3>준비물 알림이에요!</h3>
+      <div class="alarm-date" id="alarmDateLabel"></div>
+      <div id="alarmItemList"></div>
+      <div class="alarm-actions"><button id="snoozeBtn" type="button">5분 뒤 다시</button><button id="dismissBtn" type="button">확인했어요</button></div>
+    </div>
+  </div>
+
+  <script>
+(function(){
+  'use strict';
+
+  /* ============ storage ============ */
+  var STORAGE_KEY = 'spa_schedules_v1';
+  var schedules = {};
+
+  function loadData(){
+    try{ var raw = localStorage.getItem(STORAGE_KEY); schedules = raw ? JSON.parse(raw) : {}; }
+    catch(e){ schedules = {}; }
+  }
+  function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)); }
+  loadData();
+
+  /* ============ utils ============ */
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function formatDate(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function todayObj(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+  function formatDateLabel(ds){
+    var d = new Date(ds+'T00:00:00');
+    var w = ['일','월','화','수','목','금','토'][d.getDay()];
+    return (d.getMonth()+1)+'월 '+d.getDate()+'일 ('+w+')';
+  }
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+  }
+
+  /* ============ extraction engine ============ */
+  /*
+   * 준비물 추출 원칙
+   * 1) 임의의 단어를 준비물로 추측하지 않는다.
+   * 2) PREP_ITEMS에 실제로 등록된 준비물만 결과에 넣는다.
+   * 3) "연필을 / 필통이 / 가위를"처럼 조사가 붙은 형태는 허용한다.
+   * 4) "연필깎이"에서 "연필"만 잘못 뽑는 식의 부분 일치는 막는다.
+   */
+  var PREP_ITEMS = [
+    '수채화 물감','아크릴 물감','포스터 물감','연필깎이','수정테이프','클리어파일','준비물봉투',
+    '색종이','색연필','크레파스','사인펜','네임펜','보드마카','수성펜','유성마카','형광펜','만년필','붓펜',
+    '물감','팔레트','스케치북','도화지','찰흙','목공풀','딱풀','물풀','풀',
+    '가위','테이프','지우개','연필','샤프심','샤프','볼펜','필통','공책','줄공책','무지공책',
+    '노트','수첩','다이어리','파일','화일','자',
+    '국어책','수학책','영어책','과학책','사회책','도덕책','음악책','미술책','실과책','교과서','워크북','문제집','참고서',
+    '리코더','단소','멜로디언','줄넘기','물통','텀블러','실내화','운동화','체육복','여벌옷','여벌양말','수건','모자','선크림','우산','우비',
+    '마스크','손소독제','물티슈','도시락','수저','젓가락',
+    '우유팩','페트병','신문지','계란판','나무젓가락','목장갑','앞치마','붓',
+    '가정통신문','알림장','서명','도장','신분증','여권'
+  ];
+
+  /* 조사만 허용하고, "주세요/20분/가져와" 같은 일반어는 별도로 추출하지 않는다. */
+  var JOSA_LIST = [
+    '으로','에서','에게','한테','까지','부터','이랑','하고','이나',
+    '은','는','이','가','을','를','도','로','와','과','만','랑','나','의','에'
+  ];
+  var GRAMMATICAL_SUFFIXES = [
+    '입니다','이에요','예요','이야','야','이고','이며','이라고','라고','인가요','인지','인지는'
+  ];
+
+  function stripKakaoPrefix(line){
+    return line.replace(/^\[[^\]]{1,20}\]\s*(\[[^\]]{1,20}\]\s*)?/, '');
+  }
+
+  function isKoreanChar(ch){
+    return !!ch && /[가-힣]/.test(ch);
+  }
+
+  function isItemBoundaryBefore(text, start){
+    var prev = start > 0 ? text.charAt(start-1) : '';
+    /* 다른 한글 단어 안에 포함된 경우는 금지 */
+    return !isKoreanChar(prev);
+  }
+
+  function isItemBoundaryAfter(text, end){
+    if(end >= text.length) return true;
+
+    var rest = text.slice(end);
+    var next = rest.charAt(0);
+
+    /* 공백/줄바꿈/숫자/구두점 뒤면 정상적인 단어 경계 */
+    if(!isKoreanChar(next)) return true;
+
+    /* "연필을", "필통이", "가위를", "색종이랑" 같은 조사는 허용 */
+    for(var i=0;i<JOSA_LIST.length;i++){
+      var josa = JOSA_LIST[i];
+      if(rest.indexOf(josa) === 0){
+        var afterJosa = rest.slice(josa.length);
+        if(!afterJosa || !isKoreanChar(afterJosa.charAt(0))) return true;
+      }
+    }
+
+    /* "가위입니다", "필통이에요"처럼 준비물 뒤에 바로 붙는 문법적 종결만 허용 */
+    for(var j=0;j<GRAMMATICAL_SUFFIXES.length;j++){
+      if(rest.indexOf(GRAMMATICAL_SUFFIXES[j]) === 0) return true;
+    }
+
+    /* "연필깎이", "노트북"처럼 다른 한글 단어가 이어지는 경우는 금지 */
+    return false;
+  }
+
+  function extractItemsFromSegment(segText){
+    var matches = [];
+
+    /* 긴 준비물부터 찾으면 "클리어파일" 같은 복합어가 우선된다. */
+    var itemsByLength = PREP_ITEMS.slice().sort(function(a,b){
+      return b.length - a.length;
+    });
+
+    itemsByLength.forEach(function(item){
+      var searchFrom = 0;
+      while(searchFrom < segText.length){
+        var start = segText.indexOf(item, searchFrom);
+        if(start === -1) break;
+
+        var end = start + item.length;
+        if(isItemBoundaryBefore(segText, start) && isItemBoundaryAfter(segText, end)){
+          matches.push({item:item, start:start, end:end});
+        }
+        searchFrom = start + 1;
+      }
+    });
+
+    /*
+     * 더 긴 항목 안에서 중복으로 잡힌 짧은 항목을 제거한다.
+     * 예: "수채화 물감" -> "물감"을 추가로 등록하지 않음.
+     * 단, "수채화 물감과 물감"처럼 실제로 두 번 언급되면 둘 다 유지한다.
+     */
+    matches.sort(function(a,b){
+      if(a.start !== b.start) return a.start - b.start;
+      return (b.end-b.start) - (a.end-a.start);
+    });
+
+    var filtered = [];
+    matches.forEach(function(m){
+      var shadowed = matches.some(function(longer){
+        if(longer === m) return false;
+        var longerLength = longer.end - longer.start;
+        var thisLength = m.end - m.start;
+        return longerLength > thisLength &&
+               longer.start <= m.start &&
+               longer.end >= m.end;
+      });
+      if(!shadowed) filtered.push(m);
+    });
+
+    /* 이미지 OCR에서 한 항목이 여러 번 읽혀도 한 번만 등록 */
+    var found = [];
+    filtered.sort(function(a,b){ return a.start - b.start; });
+    filtered.forEach(function(m){
+      if(found.indexOf(m.item) === -1) found.push(m.item);
+    });
+
+    return found;
+  }
+
+  function parseDateSegments(text){
+    var today = todayObj();
+    var wd = {'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
+    var markers = [];
+    [['오늘',0],['내일',1],['모레',2],['글피',3]].forEach(function(pair){
+      var re = new RegExp(pair[0],'g'); var m;
+      while((m = re.exec(text))){
+        var d = new Date(today); d.setDate(d.getDate()+pair[1]);
+        markers.push({index:m.index, date:d});
+      }
+    });
+    var re2 = /(이번\s?주|다음\s?주)\s?(월|화|수|목|금|토|일)요일/g, m2;
+    while((m2 = re2.exec(text))){
+      var isNext = m2[1].indexOf('다음') === 0;
+      var targetDow = wd[m2[2]];
+      var todayDow = today.getDay();
+      var diff = (targetDow - todayDow + 7) % 7;
+      if(isNext) diff += 7;
+      var d2 = new Date(today); d2.setDate(d2.getDate()+diff);
+      markers.push({index:m2.index, date:d2});
+    }
+    var consumed = [];
+    var re3 = /(\d{1,2})\s?월\s?(\d{1,2})\s?일/g, m3;
+    while((m3 = re3.exec(text))){
+      var mo = parseInt(m3[1],10)-1, da = parseInt(m3[2],10);
+      var d3 = new Date(today.getFullYear(), mo, da);
+      if(d3 < today) d3 = new Date(today.getFullYear()+1, mo, da);
+      markers.push({index:m3.index, date:d3});
+      consumed.push([m3.index, m3.index+m3[0].length]);
+    }
+    var re4 = /(\d{1,2})\s?일(?!요일)/g, m4;
+    while((m4 = re4.exec(text))){
+      var overlap = consumed.some(function(pair){ return m4.index>=pair[0] && m4.index<pair[1]; });
+      if(overlap) continue;
+      var da4 = parseInt(m4[1],10);
+      if(da4<1||da4>31) continue;
+      var d4 = new Date(today.getFullYear(), today.getMonth(), da4);
+      if(d4 < today) d4 = new Date(today.getFullYear(), today.getMonth()+1, da4);
+      markers.push({index:m4.index, date:d4});
+    }
+    markers.sort(function(a,b){ return a.index-b.index; });
+    if(markers.length===0){
+      var dt = new Date(today); dt.setDate(dt.getDate()+1);
+      return [{date:dt, text:text}];
+    }
+    var segments = [];
+    for(var i=0;i<markers.length;i++){
+      var start = markers[i].index;
+      var end = i+1<markers.length ? markers[i+1].index : text.length;
+      segments.push({date:markers[i].date, text:text.slice(start,end)});
+    }
+    return segments;
+  }
+
+  function runExtraction(text){
+    if(!text || !text.trim()){ showToast('분석할 내용이 없어요.'); return; }
+    var segments = parseDateSegments(text);
+    var resultMap = {};
+    segments.forEach(function(seg){
+      var items = extractItemsFromSegment(seg.text);
+      if(items.length === 0) return;
+      var ds = formatDate(seg.date);
+      if(!resultMap[ds]) resultMap[ds] = {};
+      items.forEach(function(it){ resultMap[ds][it] = true; });
+    });
+    var dates = Object.keys(resultMap);
+    if(dates.length === 0){
+      showToast('준비물을 찾지 못했어요. 아래에서 직접 추가해보세요.');
+      pendingReview = {};
+      pendingReviewAlarm = {};
+      var d = new Date(); d.setDate(d.getDate()+1);
+      var noResultDate = formatDate(d);
+      pendingReview[noResultDate] = [];
+      pendingReviewAlarm[noResultDate] = '07:30';
+      renderReview();
+      return;
+    }
+    pendingReview = {};
+    pendingReviewAlarm = {};
+    dates.sort().forEach(function(ds){
+      pendingReview[ds] = Object.keys(resultMap[ds]);
+      pendingReviewAlarm[ds] = getDefaultAlarmTime(ds);
+    });
+    renderReview();
+  }
+
+
+  /* ============ review panel ============ */
+  var pendingReview = {};
+  var pendingReviewAlarm = {};
+
+  function getDefaultAlarmTime(ds){
+    if(schedules[ds] && schedules[ds].alarmTime) return schedules[ds].alarmTime;
+    return '07:30';
+  }
+
+  function updateQuickStates(container, value){
+    if(!container) return;
+    container.querySelectorAll('button[data-time]').forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.time === value);
+    });
+  }
+
+  function renderReview(){
+    var wrap = document.getElementById('reviewGroups');
+    wrap.innerHTML = '';
+    var dates = Object.keys(pendingReview).sort();
+    dates.forEach(function(ds){
+      if(!(ds in pendingReviewAlarm)) pendingReviewAlarm[ds] = getDefaultAlarmTime(ds);
+
+      var card = document.createElement('div');
+      card.className = 'review-card'; card.dataset.date = ds;
+      var head = document.createElement('div'); head.className = 'review-card-head';
+      var label = document.createElement('span'); label.className = 'date-label'; label.textContent = formatDateLabel(ds);
+      var dateInput = document.createElement('input'); dateInput.type = 'date'; dateInput.value = ds;
+      dateInput.addEventListener('change', function(){
+        var nextDate = dateInput.value;
+        if(!nextDate || nextDate === ds) return;
+        var items = pendingReview[ds];
+        var alarmTime = pendingReviewAlarm[ds];
+        delete pendingReview[ds]; delete pendingReviewAlarm[ds];
+        pendingReview[nextDate] = items;
+        pendingReviewAlarm[nextDate] = alarmTime || getDefaultAlarmTime(nextDate);
+        renderReview();
+      });
+      head.appendChild(label); head.appendChild(dateInput); card.appendChild(head);
+
+      var chipRow = document.createElement('div'); chipRow.className = 'chip-row';
+      pendingReview[ds].forEach(function(item){
+        chipRow.appendChild(makeChip(item, function(){
+          pendingReview[ds] = pendingReview[ds].filter(function(x){ return x!==item; });
+          renderReview();
+        }));
+      });
+      if(pendingReview[ds].length === 0){
+        var empty = document.createElement('span');
+        empty.style.cssText = 'color:var(--text-3);font-size:13px;';
+        empty.textContent = '아직 준비물이 없어요. 아래에서 추가해주세요.';
+        chipRow.appendChild(empty);
+      }
+      card.appendChild(chipRow);
+
+      var alarmRow = document.createElement('div'); alarmRow.className = 'review-alarm-row';
+      var alarmMeta = document.createElement('div'); alarmMeta.className = 'review-alarm-meta';
+      var alarmIcon = document.createElement('span'); alarmIcon.className = 'review-alarm-icon'; alarmIcon.textContent = '⏰';
+      var alarmCopy = document.createElement('div'); alarmCopy.className = 'review-alarm-copy';
+      var alarmStrong = document.createElement('strong'); alarmStrong.textContent = '이 일정에 알람 설정';
+      var alarmSmall = document.createElement('small'); alarmSmall.textContent = '기본 07:30 · 등록 전에 원하는 시간으로 변경할 수 있어요';
+      alarmCopy.appendChild(alarmStrong); alarmCopy.appendChild(alarmSmall);
+      alarmMeta.appendChild(alarmIcon); alarmMeta.appendChild(alarmCopy); alarmRow.appendChild(alarmMeta);
+
+      var alarmToggle = document.createElement('label'); alarmToggle.className = 'alarm-toggle';
+      var alarmCheck = document.createElement('input'); alarmCheck.type = 'checkbox'; alarmCheck.checked = pendingReviewAlarm[ds] !== null && pendingReviewAlarm[ds] !== '';
+      var alarmToggleText = document.createElement('span'); alarmToggleText.textContent = '알람 사용';
+      alarmToggle.appendChild(alarmCheck); alarmToggle.appendChild(alarmToggleText);
+
+      var alarmTime = document.createElement('input'); alarmTime.type = 'time'; alarmTime.className = 'review-alarm-time';
+      alarmTime.value = pendingReviewAlarm[ds] || '07:30';
+      alarmTime.disabled = !alarmCheck.checked;
+
+      alarmCheck.addEventListener('change', function(){
+        alarmTime.disabled = !alarmCheck.checked;
+        timeCluster.classList.toggle('disabled', !alarmCheck.checked);
+        if(alarmCheck.checked){
+          if(!alarmTime.value) alarmTime.value = '07:30';
+          pendingReviewAlarm[ds] = alarmTime.value;
+          updateQuickStates(quick, alarmTime.value);
+        }else{
+          pendingReviewAlarm[ds] = null;
+        }
+      });
+      alarmTime.addEventListener('change', function(){
+        if(alarmCheck.checked){
+          pendingReviewAlarm[ds] = alarmTime.value || '07:30';
+          updateQuickStates(quick, alarmTime.value);
+        }
+      });
+
+      alarmRow.appendChild(alarmToggle);
+
+      var timeCluster = document.createElement('div');
+      timeCluster.className = 'review-time-cluster' + (alarmCheck.checked ? '' : ' disabled');
+      var timePicker = document.createElement('div');
+      timePicker.className = 'beautiful-time-picker';
+      var timeIcon = document.createElement('span');
+      timeIcon.className = 'time-picker-icon'; timeIcon.textContent = '⏰';
+      var timeStack = document.createElement('div');
+      timeStack.className = 'time-picker-stack';
+      var timeCaption = document.createElement('span');
+      timeCaption.className = 'time-picker-caption'; timeCaption.textContent = '알람 시간';
+      var timeCaptionValue = document.createElement('span');
+      timeCaptionValue.className = 'time-picker-caption-value'; timeCaptionValue.textContent = '원하는 시간 선택';
+      timeStack.appendChild(timeCaption); timeStack.appendChild(timeCaptionValue);
+      timePicker.appendChild(timeIcon); timePicker.appendChild(timeStack); timePicker.appendChild(alarmTime);
+      var quick = document.createElement('div'); quick.className = 'time-picker-quick';
+      ['07:00','07:30','08:00','18:00'].forEach(function(t){
+        var q = document.createElement('button'); q.type='button'; q.textContent=t; q.dataset.time=t;
+        q.addEventListener('click', function(){
+          if(!alarmCheck.checked) return;
+          alarmTime.value=t; pendingReviewAlarm[ds]=t; updateQuickStates(quick,t);
+        });
+        quick.appendChild(q);
+      });
+      timeCluster.appendChild(timePicker); timeCluster.appendChild(quick);
+      alarmRow.appendChild(timeCluster);
+      updateQuickStates(quick, alarmTime.value);
+      card.appendChild(alarmRow);
+
+      var addRow = document.createElement('div'); addRow.className = 'add-item-row';
+      var input = document.createElement('input'); input.type = 'text'; input.placeholder = '준비물 이름 입력';
+      var addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = '+ 추가';
+      function addFn(){
+        var v = input.value.trim(); if(!v) return;
+        if(pendingReview[ds].indexOf(v) === -1) pendingReview[ds].push(v);
+        input.value = ''; renderReview();
+      }
+      addBtn.addEventListener('click', addFn);
+      input.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addFn(); } });
+      addRow.appendChild(input); addRow.appendChild(addBtn); card.appendChild(addRow);
+      wrap.appendChild(card);
+    });
+    document.getElementById('reviewSection').style.display = dates.length ? 'block' : 'none';
+  }
+  function makeChip(text, onRemove){
+    var chip = document.createElement('span'); chip.className = 'chip';
+    var span = document.createElement('span'); span.textContent = text;
+    var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '✕'; btn.setAttribute('aria-label','삭제');
+    btn.addEventListener('click', onRemove);
+    chip.appendChild(span); chip.appendChild(btn); return chip;
+  }
+  document.getElementById('addDateGroupBtn').addEventListener('click', function(){
+    var d = new Date(); d.setDate(d.getDate()+1);
+    var ds = formatDate(d); var i = 0;
+    while(pendingReview[ds]){ i++; d.setDate(d.getDate()+1); ds = formatDate(d); if(i>60) break; }
+    pendingReview[ds] = []; pendingReviewAlarm[ds] = '07:30'; renderReview();
+  });
+  document.getElementById('registerBtn').addEventListener('click', function(){
+    ensureAudio();
+    var dates = Object.keys(pendingReview); var total = 0;
+    dates.forEach(function(ds){
+      var items = pendingReview[ds].filter(Boolean);
+      if(items.length === 0) return;
+      if(!schedules[ds]) schedules[ds] = {alarmTime:null, items:[]};
+      items.forEach(function(name){
+        var exists = schedules[ds].items.some(function(it){ return it.name===name; });
+        if(!exists){ schedules[ds].items.push({id:uid(), name:name, done:false}); total++; }
+      });
+      if(pendingReviewAlarm[ds]) schedules[ds].alarmTime = pendingReviewAlarm[ds];
+      else schedules[ds].alarmTime = null;
+    });
+    saveData(); pendingReview = {}; pendingReviewAlarm = {}; renderReview();
+    document.getElementById('chatText').value = '';
+    resetImageInput(); renderCalendar(); renderList(); renderHeroSummary();
+    showToast(total>0 ? total+'개의 준비물과 알람 설정을 저장했어요.' : '등록할 준비물이 없었어요.');
+  });
+
+  /* ============ tabs ============ */
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ============ image input ============ */
+  var dropzone = document.getElementById('dropzone');
+  var fileInput = document.getElementById('fileInput');
+  var imgPreviewWrap = document.getElementById('imgPreviewWrap');
+  var imgPreview = document.getElementById('imgPreview');
+  var analyzeImgBtn = document.getElementById('analyzeImgBtn');
+  var currentImageDataUrl = null;
+
+  function setImage(dataUrl){
+    currentImageDataUrl = dataUrl; imgPreview.src = dataUrl;
+    imgPreviewWrap.style.display = 'block'; analyzeImgBtn.disabled = false;
+  }
+  function resetImageInput(){
+    currentImageDataUrl = null; imgPreviewWrap.style.display = 'none';
+    imgPreview.src = ''; analyzeImgBtn.disabled = true; fileInput.value = '';
+    document.getElementById('ocrProgress').style.display = 'none';
+    var complete = document.getElementById('ocrComplete');
+    complete.classList.remove('show','no-result');
+    complete.style.display = 'none';
+    document.getElementById('ocrFoundList').innerHTML = '';
+  }
+  dropzone.addEventListener('click', function(){ fileInput.click(); });
+  dropzone.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.key===' '){ fileInput.click(); } });
+  dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', function(){ dropzone.classList.remove('drag'); });
+  dropzone.addEventListener('drop', function(e){
+    e.preventDefault(); dropzone.classList.remove('drag');
+    var file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) readImageFile(file);
+  });
+  fileInput.addEventListener('change', function(){ if(fileInput.files[0]) readImageFile(fileInput.files[0]); });
+  document.addEventListener('paste', function(e){
+    if(!document.getElementById('imgTab').classList.contains('active')) return;
+    var items = e.clipboardData && e.clipboardData.items; if(!items) return;
+    for(var i=0;i<items.length;i++){
+      if(items[i].type.indexOf('image') !== -1){
+        var file = items[i].getAsFile(); if(file) readImageFile(file); break;
+      }
+    }
+  });
+  function readImageFile(file){
+    var reader = new FileReader();
+    reader.onload = function(e){ setImage(e.target.result); };
+    reader.readAsDataURL(file);
+  }
+  document.getElementById('removeImgBtn').addEventListener('click', resetImageInput);
+
+  /* canvas preprocessing: grayscale + contrast boost for cleaner OCR input */
+  function preprocessImage(dataUrl){
+    return new Promise(function(resolve){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        try{
+          var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var d = imageData.data; var contrast = 1.35, mid = 128;
+          for(var i=0; i<d.length; i+=4){
+            var gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+            gray = (gray - mid) * contrast + mid;
+            gray = gray < 0 ? 0 : (gray > 255 ? 255 : gray);
+            d[i] = d[i+1] = d[i+2] = gray;
+          }
+          ctx.putImageData(imageData, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        }catch(e){ resolve(dataUrl); }
+      };
+      img.onerror = function(){ resolve(dataUrl); };
+      img.src = dataUrl;
+    });
+  }
+
+  function showOcrCompleteAnimation(){
+    var complete = document.getElementById('ocrComplete');
+    var countEl = document.getElementById('ocrFoundCount');
+    var listEl = document.getElementById('ocrFoundList');
+    var allItems = [];
+    Object.keys(pendingReview).sort().forEach(function(ds){
+      pendingReview[ds].forEach(function(item){ if(allItems.indexOf(item)===-1) allItems.push(item); });
+    });
+
+    countEl.textContent = allItems.length + '개';
+    listEl.innerHTML = '';
+    allItems.slice(0,5).forEach(function(item){
+      var chip = document.createElement('span');
+      chip.className = 'ocr-found-chip';
+      chip.textContent = '✓ ' + item;
+      listEl.appendChild(chip);
+    });
+
+    complete.classList.remove('no-result','show');
+    void complete.offsetWidth;
+    if(allItems.length === 0) complete.classList.add('no-result');
+    complete.style.display = 'block';
+    complete.classList.add('show');
+
+    clearTimeout(showOcrCompleteAnimation._t);
+    showOcrCompleteAnimation._t = setTimeout(function(){
+      complete.classList.remove('show');
+      setTimeout(function(){
+        complete.style.display = 'none';
+        if(Object.keys(pendingReview).length){
+          document.getElementById('reviewSection').scrollIntoView({behavior:'smooth',block:'start'});
+        }
+      }, 240);
+    }, allItems.length ? 1650 : 1350);
+  }
+
+  analyzeImgBtn.addEventListener('click', function(){
+    ensureAudio();
+    if(!currentImageDataUrl || typeof Tesseract === 'undefined') return;
+    var progWrap = document.getElementById('ocrProgress');
+    var barFill = document.getElementById('ocrBarFill');
+    var status = document.getElementById('ocrStatus');
+    var complete = document.getElementById('ocrComplete');
+    complete.classList.remove('show','no-result'); complete.style.display = 'none';
+    progWrap.style.display = 'block'; analyzeImgBtn.disabled = true; barFill.style.width = '0%';
+    status.textContent = '이미지 선명하게 다듬는 중…';
+
+    preprocessImage(currentImageDataUrl).then(function(processedUrl){
+      return Tesseract.recognize(processedUrl, 'kor+eng', {
+        logger: function(m){
+          if(m.progress != null) barFill.style.width = Math.round(m.progress*100)+'%';
+          var labelMap = { 'loading tesseract core':'엔진 불러오는 중', 'initializing tesseract':'초기화 중',
+            'loading language traineddata':'언어 데이터 불러오는 중', 'initializing api':'준비 중',
+            'recognizing text':'글자 인식 중' };
+          status.textContent = (labelMap[m.status] || m.status) + ' ' + Math.round((m.progress||0)*100) + '%';
+        }
+      });
+    }).then(function(result){
+      barFill.style.width = '100%';
+      status.textContent = '분석 완료 · 결과 정리 중';
+      runExtraction(result.data.text);
+      showOcrCompleteAnimation();
+      analyzeImgBtn.disabled = false;
+    }).catch(function(err){
+      analyzeImgBtn.disabled = false; status.textContent = '오류가 발생했어요.';
+      showToast('이미지 인식에 실패했어요. 다시 시도해주세요.');
+    });
+  });
+  document.getElementById('analyzeTextBtn').addEventListener('click', function(){
+    ensureAudio();
+    runExtraction(document.getElementById('chatText').value);
+  });
+
+  /* ============ calendar ============ */
+  var viewDate = new Date();
+  var selectedDate = null;
+  function renderCalendar(){
+    var y = viewDate.getFullYear(), m = viewDate.getMonth();
+    document.getElementById('calTitle').textContent = y+'년 '+(m+1)+'월';
+    var grid = document.getElementById('calGrid'); grid.innerHTML = '';
+    ['일','월','화','수','목','금','토'].forEach(function(w){
+      var el = document.createElement('div'); el.className='cal-dow'; el.textContent=w; grid.appendChild(el);
+    });
+    var firstDow = new Date(y,m,1).getDay();
+    var daysInMonth = new Date(y,m+1,0).getDate();
+    var todayStr = formatDate(todayObj());
+    for(var i=0;i<firstDow;i++){ var pad = document.createElement('div'); pad.className='cal-cell empty'; grid.appendChild(pad); }
+    for(var day=1; day<=daysInMonth; day++){
+      var ds = y+'-'+pad2(m+1)+'-'+pad2(day);
+      var cell = document.createElement('div'); cell.className = 'cal-cell';
+      if(ds === todayStr) cell.classList.add('today');
+      if(ds === selectedDate) cell.classList.add('selected');
+      var num = document.createElement('div'); num.className='num mono'; num.textContent=day;
+      var badges = document.createElement('div'); badges.className='badges';
+      var sched = schedules[ds];
+      if(sched && sched.items && sched.items.length){
+        var dot = document.createElement('span'); dot.className='dot'; badges.appendChild(dot);
+        if(sched.alarmTime){ var ico = document.createElement('span'); ico.className='alarm-ico'; ico.textContent='⏰'; badges.appendChild(ico); }
+      }
+      cell.appendChild(num); cell.appendChild(badges);
+      cell.addEventListener('click', function(dsx){ return function(){ openDayPanel(dsx); }; }(ds));
+      grid.appendChild(cell);
+    }
+  }
+  document.getElementById('prevMonth').addEventListener('click', function(){ viewDate.setMonth(viewDate.getMonth()-1); renderCalendar(); });
+  document.getElementById('nextMonth').addEventListener('click', function(){ viewDate.setMonth(viewDate.getMonth()+1); renderCalendar(); });
+  function openDayPanel(ds){
+    selectedDate = ds;
+    if(!schedules[ds]) schedules[ds] = {alarmTime:null, items:[]};
+    renderCalendar();
+    var panel = document.getElementById('dayPanel'); panel.style.display = 'block';
+    document.getElementById('dpTitle').textContent = formatDateLabel(ds);
+    document.getElementById('dpAlarmTime').value = schedules[ds].alarmTime || '';
+    updateQuickStates(document.getElementById('dpAlarmQuick'), schedules[ds].alarmTime || '');
+    renderDayItems();
+    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+  function renderDayItems(){
+    var ds = selectedDate;
+    var wrap = document.getElementById('dpItems'); wrap.innerHTML = '';
+    var sched = schedules[ds];
+    if(!sched || sched.items.length===0){
+      var p = document.createElement('p');
+      p.style.cssText = 'color:var(--text-dim);font-size:13px;margin:6px 0;';
+      p.textContent = '등록된 준비물이 없어요.'; wrap.appendChild(p); return;
+    }
+    sched.items.forEach(function(item){
+      var row = document.createElement('div'); row.className='dp-item-row';
+      var cb = document.createElement('input'); cb.type='checkbox'; cb.checked = item.done;
+      cb.addEventListener('change', function(){ item.done = cb.checked; saveData(); renderDayItems(); renderList(); });
+      var name = document.createElement('span'); name.className = 'name'+(item.done?' done':''); name.textContent = item.name;
+      var del = document.createElement('button'); del.className='del'; del.type='button'; del.textContent='삭제';
+      del.addEventListener('click', function(){
+        sched.items = sched.items.filter(function(it){ return it.id !== item.id; });
+        saveData(); renderDayItems(); renderCalendar(); renderList(); renderHeroSummary();
+      });
+      row.appendChild(cb); row.appendChild(name); row.appendChild(del); wrap.appendChild(row);
+    });
+  }
+  document.getElementById('dpClose').addEventListener('click', function(){
+    document.getElementById('dayPanel').style.display='none'; selectedDate = null; renderCalendar();
+  });
+  document.getElementById('dpAlarmTime').addEventListener('change', function(e){
+    schedules[selectedDate].alarmTime = e.target.value || null;
+    updateQuickStates(document.getElementById('dpAlarmQuick'), e.target.value || '');
+    saveData(); renderCalendar(); renderList(); renderHeroSummary();
+  });
+  document.querySelectorAll('#dpAlarmQuick button[data-time]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var input = document.getElementById('dpAlarmTime');
+      input.value = btn.dataset.time;
+      updateQuickStates(document.getElementById('dpAlarmQuick'), input.value);
+      input.dispatchEvent(new Event('change', {bubbles:true}));
+    });
+  });
+  document.getElementById('dpAddBtn').addEventListener('click', addDpItem);
+  document.getElementById('dpAddInput').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addDpItem(); } });
+  function addDpItem(){
+    var input = document.getElementById('dpAddInput');
+    var v = input.value.trim(); if(!v || !selectedDate) return;
+    schedules[selectedDate].items.push({id:uid(), name:v, done:false});
+    input.value = ''; saveData(); renderDayItems(); renderCalendar(); renderList(); renderHeroSummary();
+  }
+  document.getElementById('dpDeleteDay').addEventListener('click', function(){
+    delete schedules[selectedDate]; saveData();
+    document.getElementById('dayPanel').style.display='none'; selectedDate = null;
+    renderCalendar(); renderList();
+  });
+
+  /* ============ upcoming list ============ */
+  function renderList(){
+    var wrap = document.getElementById('listRows'); wrap.innerHTML = '';
+    var todayStr = formatDate(todayObj());
+    var dates = Object.keys(schedules).filter(function(ds){
+      return ds >= todayStr && schedules[ds].items.length > 0;
+    }).sort();
+    document.getElementById('emptyList').style.display = dates.length ? 'none' : 'block';
+    dates.forEach(function(ds){
+      var sched = schedules[ds];
+      var row = document.createElement('div'); row.className='list-row';
+      var dateCol = document.createElement('div');
+      var dLabel = document.createElement('div'); dLabel.className='lr-date'; dLabel.textContent = formatDateLabel(ds);
+      dateCol.appendChild(dLabel);
+      if(sched.alarmTime){
+        var t = document.createElement('div'); t.className='lr-time mono'; t.textContent='⏰ '+sched.alarmTime;
+        dateCol.appendChild(t);
+      }
+      var itemsCol = document.createElement('div'); itemsCol.className='lr-items';
+      sched.items.forEach(function(it){
+        var span = document.createElement('span'); span.textContent = it.name + (it.done ? ' ✓' : '');
+        itemsCol.appendChild(span);
+      });
+      row.appendChild(dateCol); row.appendChild(itemsCol);
+      row.addEventListener('click', function(){ openDayPanel(ds); });
+      wrap.appendChild(row);
+    });
+  }
+
+  /* ============ notifications ============ */
+  var notifBtn = document.getElementById('notifBtn');
+  function updateNotifBtn(){
+    if(!('Notification' in window)){ notifBtn.textContent = '🔕 알림 미지원'; notifBtn.disabled = true; return; }
+    if(Notification.permission === 'granted') notifBtn.textContent = '🔔 알림 켜짐';
+    else if(Notification.permission === 'denied') notifBtn.textContent = '🔕 알림 차단됨';
+    else notifBtn.textContent = '🔔 알림 켜기';
+  }
+  notifBtn.addEventListener('click', function(){
+    ensureAudio();
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission().then(updateNotifBtn);
+    }
+  });
+  updateNotifBtn();
+
+  /* ============ audio ============ */
+  var audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){ var Ctx = window.AudioContext || window.webkitAudioContext; if(Ctx) audioCtx = new Ctx(); }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beepOnce(){
+    if(!audioCtx) return;
+    var o = audioCtx.createOscillator(); var g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = 880;
+    o.connect(g); g.connect(audioCtx.destination);
+    var t0 = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.32, t0+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+0.28);
+    o.start(t0); o.stop(t0+0.3);
+    var o2 = audioCtx.createOscillator(); var g2 = audioCtx.createGain();
+    o2.type = 'sine'; o2.frequency.value = 1046.5;
+    o2.connect(g2); g2.connect(audioCtx.destination);
+    g2.gain.setValueAtTime(0.0001, t0+0.32);
+    g2.gain.exponentialRampToValueAtTime(0.32, t0+0.335);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t0+0.6);
+    o2.start(t0+0.32); o2.stop(t0+0.62);
+  }
+  var alarmSoundTimer = null;
+  function startAlarmSound(){ ensureAudio(); beepOnce(); clearInterval(alarmSoundTimer); alarmSoundTimer = setInterval(beepOnce, 900); }
+  function stopAlarmSound(){ clearInterval(alarmSoundTimer); alarmSoundTimer = null; }
+
+  /* ============ alarm trigger ============ */
+  var lastTriggeredKey = null;
+  var snoozeTimers = {};
+  function triggerAlarm(ds){
+    var sched = schedules[ds];
+    if(!sched || !sched.items || sched.items.length===0) return;
+    var overlay = document.getElementById('alarmOverlay');
+    document.getElementById('alarmDateLabel').textContent = formatDateLabel(ds);
+    var listWrap = document.getElementById('alarmItemList'); listWrap.innerHTML = '';
+    sched.items.forEach(function(it){
+      var row = document.createElement('div'); row.className='ai-row'; row.textContent = it.name;
+      listWrap.appendChild(row);
+    });
+    overlay.style.display = 'flex'; startAlarmSound();
+    if('Notification' in window && Notification.permission === 'granted'){
+      try{ new Notification('⏰ 준비물 알람', { body: sched.items.map(function(i){return i.name;}).join(', ') }); }catch(e){}
+    }
+    overlay.dataset.date = ds;
+  }
+  function dismissAlarm(){ document.getElementById('alarmOverlay').style.display = 'none'; stopAlarmSound(); }
+  document.getElementById('dismissBtn').addEventListener('click', dismissAlarm);
+  document.getElementById('snoozeBtn').addEventListener('click', function(){
+    var ds = document.getElementById('alarmOverlay').dataset.date;
+    dismissAlarm(); clearTimeout(snoozeTimers[ds]);
+    snoozeTimers[ds] = setTimeout(function(){ triggerAlarm(ds); }, 5*60*1000);
+    showToast('5분 뒤에 다시 알려드릴게요.');
+  });
+  function checkAlarms(){
+    var now = new Date(); var ds = formatDate(now);
+    var hm = pad2(now.getHours())+':'+pad2(now.getMinutes());
+    var sched = schedules[ds];
+    if(sched && sched.alarmTime === hm && sched.items && sched.items.length){
+      var key = ds+hm;
+      if(lastTriggeredKey !== key){ lastTriggeredKey = key; triggerAlarm(ds); }
+    }
+  }
+
+  /* ============ clock tick ============ */
+  function tick(){
+    var now = new Date();
+    document.getElementById('clock').textContent = pad2(now.getHours())+':'+pad2(now.getMinutes())+':'+pad2(now.getSeconds());
+    checkAlarms();
+  }
+  setInterval(tick, 1000); tick();
+
+
+  /* ============ hero dashboard ============ */
+  function renderHeroSummary(){
+    var today = formatDate(todayObj());
+    var todayLabel = formatDateLabel(today);
+    document.getElementById('heroToday').textContent = todayLabel.replace(' (',' · ').replace(')','');
+    var upcomingDates = Object.keys(schedules).filter(function(ds){
+      return ds >= today && schedules[ds] && schedules[ds].items && schedules[ds].items.length > 0;
+    }).sort();
+    document.getElementById('heroUpcoming').textContent = upcomingDates.length + '개';
+    var alarmCount = upcomingDates.filter(function(ds){ return !!schedules[ds].alarmTime; }).length;
+    document.getElementById('heroAlarmStatus').textContent = upcomingDates.length ? (alarmCount + '개 설정') : '확인 필요';
+    var nextDate = upcomingDates.length ? upcomingDates[0] : null;
+    var dateEl = document.getElementById('heroNextDate');
+    var itemsEl = document.getElementById('heroItems');
+    itemsEl.innerHTML = '';
+    if(!nextDate){
+      dateEl.textContent = '등록된 일정이 없어요';
+      var empty = document.createElement('div');
+      empty.className = 'hero-empty';
+      empty.innerHTML = '아직 등록된 준비물이 없어요.<br>아래에서 채팅을 분석해보세요.';
+      itemsEl.appendChild(empty);
+      return;
+    }
+    dateEl.textContent = formatDateLabel(nextDate) + (schedules[nextDate].alarmTime ? ' · ⏰ '+schedules[nextDate].alarmTime : '');
+    schedules[nextDate].items.slice(0,4).forEach(function(it){
+      var row = document.createElement('div'); row.className = 'hero-item';
+      var bullet = document.createElement('span'); bullet.className = 'bullet';
+      var text = document.createElement('span'); text.textContent = it.name;
+      row.appendChild(bullet); row.appendChild(text); itemsEl.appendChild(row);
+    });
+    if(schedules[nextDate].items.length > 4){
+      var more = document.createElement('div'); more.className='hero-empty'; more.textContent='+'+(schedules[nextDate].items.length-4)+'개 더 있어요'; itemsEl.appendChild(more);
+    }
+  }
+
+  /* ============ hero headline rotation ============ */
+  var heroHeadline = document.getElementById('heroHeadline');
+  var heroMessageIndex = 0;
+  var HERO_MESSAGE_MS = 4200;
+  var HERO_SWAP_MS = 280;
+
+  function getHeroHeadlineMessages(){
+    var today = formatDate(todayObj());
+    var upcomingCount = Object.keys(schedules).filter(function(ds){
+      return ds >= today && schedules[ds] && schedules[ds].items && schedules[ds].items.length > 0;
+    }).length;
+    var alarmCount = Object.keys(schedules).filter(function(ds){
+      return ds >= today && schedules[ds] && schedules[ds].items && schedules[ds].items.length > 0 && !!schedules[ds].alarmTime;
+    }).length;
+    return [
+      '준비물, <span>미리 챙겨두세요.</span>',
+      '다가오는 일정이 <span class="hero-accent-inline">'+upcomingCount+'개</span> 있어요.',
+      '알람이 설정된 일정은 <span class="hero-accent-inline">'+alarmCount+'개</span>예요.'
+    ];
+  }
+
+  function cycleHeroHeadline(){
+    if(!heroHeadline) return;
+    var messages = getHeroHeadlineMessages();
+    heroMessageIndex = (heroMessageIndex + 1) % messages.length;
+    heroHeadline.classList.remove('hero-cycle-in');
+    heroHeadline.classList.add('hero-cycle-out');
+    setTimeout(function(){
+      heroHeadline.innerHTML = messages[heroMessageIndex];
+      heroHeadline.classList.remove('hero-cycle-out');
+      void heroHeadline.offsetWidth;
+      heroHeadline.classList.add('hero-cycle-in');
+    }, HERO_SWAP_MS);
+  }
+
+  /* 첫 진입 모션이 끝난 뒤 약 4.2초마다 문구를 순환합니다. */
+  setInterval(cycleHeroHeadline, HERO_MESSAGE_MS);
+
+  /* ============ init ============ */
+  renderCalendar(); renderList(); renderHeroSummary();
+
+})();
+</script>
+
+</body>
+</html>
